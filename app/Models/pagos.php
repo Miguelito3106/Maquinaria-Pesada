@@ -31,11 +31,11 @@ class pagos extends Model
 
     public function mantenimiento(): BelongsTo
     {
-        return $this->belongsTo(Mantenimientos::class);
+        return $this->belongsTo(Mantenimientos::class, 'mantenimientos_id');
     }
 
     public function empresa(): BelongsTo
     {
-        return $this->belongsTo(empresas::class);
+        return $this->belongsTo(empresas::class, 'empresas_id');
     }
 }

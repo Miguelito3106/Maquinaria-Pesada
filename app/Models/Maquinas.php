@@ -4,9 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Maquinas extends Model
 {
@@ -17,30 +14,17 @@ class Maquinas extends Model
         'categorias_maquinarias_id'
     ];
 
-    protected $table = 'maquinas';
-
-    public function categoria(): BelongsTo
+    // RELACIÓN CORREGIDA - Cambiar 'solicitudes_maquinas' por 'solicitudes'
+    public function solicitudes()
     {
-        return $this->belongsTo(categoriasMaquinarias::class);
-    }
-
-    public function mantenimientos(): HasMany
-    {
-        return $this->hasMany(Mantenimientos::class);
-    }
-
-    public function solicitudes(): BelongsToMany
-    {
-        return $this->belongsToMany(solicitudes::class, 'solicitud_maquina')
-                    ->withPivot(['mantenimientos_id', 'cantidad'])
+        return $this->belongsToMany(Solicitudes::class, 'solicitud_maquina')
+                    ->withPivot('cantidad', 'created_at', 'updated_at')
                     ->withTimestamps();
     }
 
-    // NUEVA: Relación con mantenimientos a través de la tabla pivote
-    public function mantenimientosPivot(): BelongsToMany
+    // Relación con categoria
+    public function categoria()
     {
-        return $this->belongsToMany(Mantenimientos::class, 'solicitud_maquina', 'maquinas_id', 'mantenimientos_id')
-                    ->withPivot(['solicitud_id', 'cantidad'])
-                    ->withTimestamps();
+        return $this->belongsTo(categoriasMaquinarias::class, 'categorias_maquinarias_id');
     }
 }

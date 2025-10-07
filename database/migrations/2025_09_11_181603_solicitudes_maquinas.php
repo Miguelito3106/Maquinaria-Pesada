@@ -1,4 +1,5 @@
 <?php
+// database/migrations/xxxx_xx_xx_xxxxxx_create_solicitud_maquina_table.php
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -6,29 +7,22 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up(): void
+    public function up()
     {
-        Schema::table('solicitud_maquina', function (Blueprint $table) {
-            // Agregar la columna mantenimientos_id
-            $table->foreignId('mantenimientos_id')->after('maquinas_id')->constrained('mantenimientos')->onDelete('cascade');
+        Schema::create('solicitud_maquina', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('solicitud_id')->constrained()->onDelete('cascade');
+            $table->foreignId('maquina_id')->constrained()->onDelete('cascade');
+            $table->integer('cantidad');
+            $table->timestamps();
             
-            // Eliminar el índice único existente
-            $table->dropUnique(['solicitud_id', 'maquinas_id']);
-            
-            // Crear nuevo índice único con los tres campos
-            $table->unique(['solicitud_id', 'maquinas_id', 'mantenimientos_id']);
+            // Para evitar duplicados
+            $table->unique(['solicitud_id', 'maquina_id']);
         });
     }
 
-    public function down(): void
+    public function down()
     {
-        Schema::table('solicitud_maquina', function (Blueprint $table) {
-            $table->dropForeign(['mantenimientos_id']);
-            $table->dropColumn('mantenimientos_id');
-            
-            $table->dropUnique(['solicitud_id', 'maquinas_id', 'mantenimientos_id']);
-            
-            $table->unique(['solicitud_id', 'maquinas_id']);
-        });
+        Schema::dropIfExists('solicitud_maquina');
     }
 };

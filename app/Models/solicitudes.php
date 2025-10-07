@@ -1,13 +1,11 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-class solicitudes extends Model
+class Solicitudes extends Model
 {
     use HasFactory;
 
@@ -18,39 +16,49 @@ class solicitudes extends Model
         'descripcion',
         'cantidadMaquinas',
         'fotos',
-        'empresas_id'
+        'empresas_id',
+        'user_id',
+        'fecha_solicitud',
+        'fecha_uso',
+        'hora_inicio',
+        'hora_fin',
+        'proyecto',
+        'lugar',
+        'estado'
     ];
-
-    protected $table = 'solicitudes';
 
     protected $casts = [
         'fechaSolicitud' => 'date',
         'fechaProgramada' => 'date',
+        'fecha_solicitud' => 'date',
+        'fecha_uso' => 'date',
         'fotos' => 'array',
     ];
 
-    public function empresa(): BelongsTo
+    // Relación con User - ESTA ESTÁ BIEN
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    // Relación con Empresa
+    public function empresa()
     {
         return $this->belongsTo(empresas::class, 'empresas_id');
     }
 
-    // RELACIÓN DIRECTA con mantenimientos (CORRECTA)
-    public function mantenimientos(): HasMany
+    // RELACIÓN CORREGIDA - Cambiar 'maquinarias' por 'maquinas'
+    public function maquinas()
     {
-        return $this->hasMany(Mantenimientos::class, 'solicitud_id');
-    }
-
-    public function empleados(): BelongsToMany
-    {
-        return $this->belongsToMany(empleados::class, 'solicitud_empleado', 'solicitud_id', 'empleado_id')
+        return $this->belongsToMany(Maquinas::class, 'solicitud_maquina')
+                    ->withPivot('cantidad', 'created_at', 'updated_at')
                     ->withTimestamps();
     }
 
-    // RELACIÓN CON MÁQUINAS - SIN USAR TABLA PIVOTE COMPLEJA
-    public function maquinas(): BelongsToMany
+    // Relación con empleados
+    public function empleados()
     {
-        return $this->belongsToMany(Maquinas::class, 'solicitud_maquina', 'solicitud_id', 'maquinas_id')
-                    ->withPivot('cantidad')
+        return $this->belongsToMany(empleados::class, 'solicitud_empleado')
                     ->withTimestamps();
     }
 }

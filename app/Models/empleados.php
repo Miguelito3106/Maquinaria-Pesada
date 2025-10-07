@@ -24,7 +24,7 @@ class empleados extends Model
 
     public function cargo(): BelongsTo
     {
-        return $this->belongsTo(cargos::class);
+        return $this->belongsTo(cargos::class, 'cargos_id');
     }
 
     public function solicitudes(): BelongsToMany

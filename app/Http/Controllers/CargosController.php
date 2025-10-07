@@ -7,6 +7,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 /**
+ * Controlador para gestión de cargos de empleados
+ * 
+ * Maneja todas las operaciones CRUD para los cargos que pueden tener los empleados
+ * en el sistema.
+ * 
  * @OA\Tag(
  *     name="Cargos",
  *     description="Endpoints para gestión de cargos de empleados"
@@ -15,6 +20,11 @@ use Illuminate\Support\Facades\Validator;
 class CargosController extends Controller
 {
     /**
+     * Obtener lista de todos los cargos
+     * 
+     * Retorna una lista completa de todos los cargos registrados en el sistema
+     * con sus empleados asociados.
+     * 
      * @OA\Get(
      *     path="/api/ListarCargos",
      *     summary="Obtener lista de cargos",
@@ -29,11 +39,16 @@ class CargosController extends Controller
      */
     public function index()
     {
+        // Obtener todos los cargos con empleados asociados
         $cargos = cargos::with('empleados')->get();
         return response()->json($cargos);
     }
 
     /**
+     * Crear un nuevo cargo
+     * 
+     * Registra un nuevo cargo en el sistema con nombre y descripción.
+     * 
      * @OA\Post(
      *     path="/api/CrearCargos",
      *     summary="Crear un nuevo cargo",
@@ -60,6 +75,7 @@ class CargosController extends Controller
      */
     public function store(Request $request)
     {
+        // Validar datos de entrada
         $validator = Validator::make($request->all(), [
             'NombreCargo' => 'required|unique:cargos,NombreCargo|string|max:255',
             'Descripcion' => 'required|string|max:500'
@@ -69,11 +85,16 @@ class CargosController extends Controller
             return response()->json($validator->errors(), 422);
         }
 
+        // Crear nuevo cargo
         $cargo = cargos::create($validator->validated());
         return response()->json($cargo, 201);
     }
 
     /**
+     * Obtener un cargo específico
+     * 
+     * Retorna la información detallada de un cargo específico por su ID.
+     * 
      * @OA\Get(
      *     path="/api/ObtenerCargo/{id}",
      *     summary="Obtener un cargo específico",
@@ -99,6 +120,7 @@ class CargosController extends Controller
      */
     public function show(string $id)
     {
+        // Buscar cargo por ID con empleados asociados
         $cargo = cargos::with('empleados')->find($id);
         if (!$cargo) {
             return response()->json(['message' => 'Cargo no encontrado'], 404);
@@ -107,6 +129,10 @@ class CargosController extends Controller
     }
 
     /**
+     * Actualizar un cargo existente
+     * 
+     * Permite actualizar la información de un cargo existente.
+     * 
      * @OA\Put(
      *     path="/api/ActualizarCargos/{id}",
      *     summary="Actualizar un cargo",
@@ -139,11 +165,13 @@ class CargosController extends Controller
      */
     public function update(Request $request, string $id)
     {
+        // Buscar cargo por ID
         $cargo = cargos::find($id);
         if (!$cargo) {
             return response()->json(['message' => 'Cargo no encontrado'], 404);
         }
 
+        // Validar datos de entrada (campos opcionales)
         $validator = Validator::make($request->all(), [
             'NombreCargo' => 'sometimes|unique:cargos,NombreCargo,' . $id,
             'Descripcion' => 'sometimes|string|max:500'
@@ -153,11 +181,16 @@ class CargosController extends Controller
             return response()->json($validator->errors(), 422);
         }
 
+        // Actualizar cargo
         $cargo->update($validator->validated());
         return response()->json($cargo);
     }
 
     /**
+     * Eliminar un cargo
+     * 
+     * Elimina permanentemente un cargo del sistema.
+     * 
      * @OA\Delete(
      *     path="/api/EliminarCargos/{id}",
      *     summary="Eliminar un cargo",
@@ -185,16 +218,21 @@ class CargosController extends Controller
      */
     public function destroy(string $id)
     {
+        // Buscar cargo por ID
         $cargo = cargos::find($id);
         if (!$cargo) {
             return response()->json(['message' => 'Cargo no encontrado'], 404);
         }
+        
+        // Eliminar cargo
         $cargo->delete();
         return response()->json(['message' => 'Cargo eliminado correctamente']);
     }
 }
 
 /**
+ * Esquema de Cargo para documentación OpenAPI
+ * 
  * @OA\Schema(
  *     schema="Cargo",
  *     type="object",

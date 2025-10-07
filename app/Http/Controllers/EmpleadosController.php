@@ -7,63 +7,40 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 /**
- * @OA\Tag(
- *     name="Empleados",
- *     description="Endpoints para gestión de empleados"
- * )
+ * Controlador para gestión de empleados
+ * 
+ * Maneja todas las operaciones CRUD para los empleados del sistema,
+ * incluyendo consultas especiales para empleados ordenados.
  */
 class EmpleadosController extends Controller
 {
     /**
-     * @OA\Get(
-     *     path="/api/ListarEmpleados",
-     *     summary="Obtener lista de empleados",
-     *     tags={"Empleados"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Response(
-     *         response=200,
-     *         description="Lista de empleados obtenida correctamente",
-     *         @OA\JsonContent(type="array", @OA\Items(ref="#/components/schemas/Empleado"))
-     *     )
-     * )
+     * Obtener lista de todos los empleados
+     * 
+     * Retorna una lista completa de todos los empleados registrados en el sistema
+     * con sus cargos asociados.
+     * 
+     * @return \Illuminate\Http\JsonResponse
      */
     public function index()
     {
+        // Obtener todos los empleados con sus cargos
         $empleados = empleados::with('cargo')->get();
         return response()->json($empleados);
     }
 
     /**
-     * @OA\Post(
-     *     path="/api/CrearEmpleados",
-     *     summary="Crear un nuevo empleado",
-     *     tags={"Empleados"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             required={"Documento","Nombre","Apellido","Telefono","cargos_id"},
-     *             @OA\Property(property="Documento", type="string", example="12345678"),
-     *             @OA\Property(property="Nombre", type="string", example="Juan"),
-     *             @OA\Property(property="Apellido", type="string", example="Pérez"),
-     *             @OA\Property(property="Telefono", type="string", example="+573001234567"),
-     *             @OA\Property(property="Email", type="string", format="email", example="juan@empresa.com"),
-     *             @OA\Property(property="cargos_id", type="integer", example=1)
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=201,
-     *         description="Empleado creado correctamente",
-     *         @OA\JsonContent(ref="#/components/schemas/Empleado")
-     *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="Error de validación"
-     *     )
-     * )
+     * Crear un nuevo empleado
+     * 
+     * Registra un nuevo empleado en el sistema con toda su información personal
+     * y cargo asignado.
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
      */
     public function store(Request $request)
     {
+        // Validar datos de entrada
         $validator = Validator::make($request->all(), [
             'Documento' => 'required|string|max:20|unique:empleados,Documento',
             'Nombre' => 'required|string|max:255',
@@ -73,89 +50,55 @@ class EmpleadosController extends Controller
             'cargos_id' => 'required|exists:cargos,id'
         ]);
 
+        // Retornar errores de validación si existen
         if ($validator->fails()) {
             return response()->json($validator->errors(), 422);
         }
 
+        // Crear nuevo empleado
         $empleado = empleados::create($validator->validated());
         return response()->json($empleado, 201);
     }
 
     /**
-     * @OA\Get(
-     *     path="/api/ObtenerEmpleado/{id}",
-     *     summary="Obtener un empleado específico",
-     *     tags={"Empleados"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         description="ID del empleado",
-     *         @OA\Schema(type="integer")
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Empleado encontrado",
-     *         @OA\JsonContent(ref="#/components/schemas/Empleado")
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Empleado no encontrado"
-     *     )
-     * )
+     * Obtener un empleado específico
+     * 
+     * Retorna la información detallada de un empleado específico por su ID.
+     * 
+     * @param string $id ID del empleado
+     * @return \Illuminate\Http\JsonResponse
      */
     public function show(string $id)
     {
+        // Buscar empleado por ID con su cargo
         $empleado = empleados::with('cargo')->find($id);
+        
+        // Verificar si el empleado existe
         if (!$empleado) {
             return response()->json(['message' => 'Empleado no encontrado'], 404);
         }
+        
         return response()->json($empleado);
     }
 
     /**
-     * @OA\Put(
-     *     path="/api/ActualizarEmpleados/{id}",
-     *     summary="Actualizar un empleado",
-     *     tags={"Empleados"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         description="ID del empleado",
-     *         @OA\Schema(type="integer")
-     *     ),
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             @OA\Property(property="Documento", type="string", example="12345678"),
-     *             @OA\Property(property="Nombre", type="string", example="Juan Carlos"),
-     *             @OA\Property(property="Apellido", type="string", example="Pérez García"),
-     *             @OA\Property(property="Telefono", type="string", example="+573001234568"),
-     *             @OA\Property(property="Email", type="string", format="email", example="juanc@empresa.com"),
-     *             @OA\Property(property="cargos_id", type="integer", example=2)
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Empleado actualizado correctamente",
-     *         @OA\JsonContent(ref="#/components/schemas/Empleado")
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Empleado no encontrado"
-     *     )
-     * )
+     * Actualizar un empleado existente
+     * 
+     * Permite actualizar la información de un empleado existente.
+     * 
+     * @param Request $request
+     * @param string $id ID del empleado
+     * @return \Illuminate\Http\JsonResponse
      */
     public function update(Request $request, string $id)
     {
+        // Buscar empleado por ID
         $empleado = empleados::find($id);
         if (!$empleado) {
             return response()->json(['message' => 'Empleado no encontrado'], 404);
         }
 
+        // Validar datos de entrada (campos opcionales)
         $validator = Validator::make($request->all(), [
             'Documento' => 'sometimes|string|max:20|unique:empleados,Documento,' . $id,
             'Nombre' => 'sometimes|string|max:255',
@@ -169,87 +112,51 @@ class EmpleadosController extends Controller
             return response()->json($validator->errors(), 422);
         }
 
+        // Actualizar empleado
         $empleado->update($validator->validated());
         return response()->json($empleado);
     }
 
     /**
-     * @OA\Delete(
-     *     path="/api/EliminarEmpleados/{id}",
-     *     summary="Eliminar un empleado",
-     *     tags={"Empleados"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         description="ID del empleado",
-     *         @OA\Schema(type="integer")
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Empleado eliminado correctamente",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string", example="Empleado eliminado correctamente")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Empleado no encontrado"
-     *     )
-     * )
+     * Eliminar un empleado
+     * 
+     * Elimina permanentemente un empleado del sistema.
+     * 
+     * @param string $id ID del empleado
+     * @return \Illuminate\Http\JsonResponse
      */
     public function destroy(string $id)
     {
+        // Buscar empleado por ID
         $empleado = empleados::find($id);
         if (!$empleado) {
             return response()->json(['message' => 'Empleado no encontrado'], 404);
         }
+        
+        // Eliminar empleado
         $empleado->delete();
         return response()->json(['message' => 'Empleado eliminado correctamente']);
     }
 
     /**
-     * @OA\Get(
-     *     path="/api/EmpleadosOrdenados",
-     *     summary="Obtener empleados ordenados por apellido y nombre",
-     *     tags={"Empleados"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Response(
-     *         response=200,
-     *         description="Lista de empleados ordenados",
-     *         @OA\JsonContent(type="array", @OA\Items(ref="#/components/schemas/Empleado"))
-     *     )
-     * )
+     * Listar empleados ordenados por apellido y nombre
+     * 
+     * Consulta especial que retorna empleados filtrados por cargo "empleado"
+     * y ordenados alfabéticamente por apellido y nombre.
+     * 
+     * @return \Illuminate\Http\JsonResponse
      */
     public function listarEmpleadosOrdenados()
     {
+        // Consulta para empleados ordenados
         $empleados = empleados::with('cargo')
             ->whereHas('cargo', function($query) {
-                $query->where('NombreCargo', 'like', '%empleado%');
+                $query->where('NombreCargo', 'like', '%empleado%'); // Filtrar por cargo de empleado
             })
-            ->orderBy('Apellido')
-            ->orderBy('Nombre')
+            ->orderBy('Apellido') // Ordenar por apellido
+            ->orderBy('Nombre')   // Luego por nombre
             ->get(['id', 'Documento', 'Nombre', 'Apellido', 'Telefono', 'Email', 'cargos_id']);
 
         return response()->json($empleados);
     }
 }
-
-/**
- * @OA\Schema(
- *     schema="Empleado",
- *     type="object",
- *     title="Empleado",
- *     required={"id", "Documento", "Nombre", "Apellido", "Telefono", "cargos_id"},
- *     @OA\Property(property="id", type="integer", example=1),
- *     @OA\Property(property="Documento", type="string", example="12345678"),
- *     @OA\Property(property="Nombre", type="string", example="Juan"),
- *     @OA\Property(property="Apellido", type="string", example="Pérez"),
- *     @OA\Property(property="Telefono", type="string", example="+573001234567"),
- *     @OA\Property(property="Email", type="string", format="email", example="juan@empresa.com"),
- *     @OA\Property(property="cargos_id", type="integer", example=1),
- *     @OA\Property(property="created_at", type="string", format="date-time"),
- *     @OA\Property(property="updated_at", type="string", format="date-time")
- * )
- */
