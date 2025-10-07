@@ -27,4 +27,10 @@ class Maquinas extends Model
     {
         return $this->belongsTo(categoriasMaquinarias::class, 'categorias_maquinarias_id');
     }
+
+    // Relación con mantenimientos
+    public function mantenimientos()
+    {
+        return $this->hasMany(Mantenimientos::class, 'maquinas_id');
+    }
 }

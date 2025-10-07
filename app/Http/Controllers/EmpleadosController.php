@@ -140,19 +140,15 @@ class EmpleadosController extends Controller
 
     /**
      * Listar empleados ordenados por apellido y nombre
-     * 
-     * Consulta especial que retorna empleados filtrados por cargo "empleado"
-     * y ordenados alfabéticamente por apellido y nombre.
-     * 
+     *
+     * Consulta especial que retorna empleados ordenados alfabéticamente por apellido y nombre.
+     *
      * @return \Illuminate\Http\JsonResponse
      */
     public function listarEmpleadosOrdenados()
     {
         // Consulta para empleados ordenados
         $empleados = empleados::with('cargo')
-            ->whereHas('cargo', function($query) {
-                $query->where('NombreCargo', 'like', '%empleado%'); // Filtrar por cargo de empleado
-            })
             ->orderBy('Apellido') // Ordenar por apellido
             ->orderBy('Nombre')   // Luego por nombre
             ->get(['id', 'Documento', 'Nombre', 'Apellido', 'Telefono', 'Email', 'cargos_id']);

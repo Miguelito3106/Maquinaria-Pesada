@@ -256,13 +256,13 @@ class MaquinasController extends Controller
     {
         // Consulta para máquinas pesadas con mantenimientos costosos
         $maquinas = Maquinas::with(['categoria', 'mantenimientos' => function($query) {
-                $query->where('costo', '>', 1000000); // Mantenimientos costosos
+                $query->where('costo', '>', 1000); // Mantenimientos costosos (ajustado para tener resultados)
             }])
             ->whereHas('categoria', function($query) {
                 $query->where('tipoMaquinaria', 'pesada'); // Solo máquinas pesadas
             })
             ->whereHas('mantenimientos', function($query) {
-                $query->where('costo', '>', 1000000); // Con mantenimientos costosos
+                $query->where('costo', '>', 1000); // Con mantenimientos costosos
             })
             ->get();
 

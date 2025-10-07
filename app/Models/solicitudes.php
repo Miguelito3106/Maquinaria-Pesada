@@ -18,7 +18,6 @@ class Solicitudes extends Model
         'fotos',
         'empresas_id',
         'user_id',
-        'fecha_solicitud',
         'fecha_uso',
         'hora_inicio',
         'hora_fin',
@@ -30,7 +29,6 @@ class Solicitudes extends Model
     protected $casts = [
         'fechaSolicitud' => 'date',
         'fechaProgramada' => 'date',
-        'fecha_solicitud' => 'date',
         'fecha_uso' => 'date',
         'fotos' => 'array',
     ];

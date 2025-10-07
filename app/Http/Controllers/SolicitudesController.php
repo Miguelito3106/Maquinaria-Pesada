@@ -49,7 +49,7 @@ class SolicitudesController extends Controller
 
         $solicitud = Solicitudes::create([
             'user_id' => Auth::id(),
-            'fecha_solicitud' => now(),
+            'fechaSolicitud' => now(),
             'fecha_uso' => $request->fecha_uso,
             'hora_inicio' => $request->hora_inicio,
             'hora_fin' => $request->hora_fin,
@@ -166,7 +166,11 @@ class SolicitudesController extends Controller
     // Solicitudes por documento de empleado
     public function solicitudesPorDocumentoEmpleado($documento)
     {
-        $solicitudes = empleados::where('Documento', $documento)->first()->solicitudes()->with('maquinas')->get();
+        $empleado = empleados::where('Documento', $documento)->first();
+        if (!$empleado) {
+            return response()->json(['message' => 'Empleado no encontrado'], 404);
+        }
+        $solicitudes = $empleado->solicitudes()->with('maquinas')->get();
         return response()->json($solicitudes);
     }
 
