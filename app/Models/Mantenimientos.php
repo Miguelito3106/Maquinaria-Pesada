@@ -20,7 +20,6 @@ class Mantenimientos extends Model
         'manualProcedimiento',
         'fechaEntrega',
         'maquinas_id',
-        'solicitud_id'
     ];
 
     protected $table = 'mantenimientos';

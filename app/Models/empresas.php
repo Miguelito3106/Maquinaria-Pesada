@@ -26,6 +26,11 @@ class empresas extends Model
         return $this->hasOne(representantes::class);
     }
 
+    public function maquinas(): HasMany
+    {
+        return $this->hasMany(Maquinas::class, 'empresa_id');
+    }
+
     public function pagos(): HasMany
     {
         return $this->hasMany(pagos::class);

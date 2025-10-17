@@ -4,59 +4,78 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Solicitudes extends Model
 {
     use HasFactory;
 
+    protected $table = 'solicitudes';
+
     protected $fillable = [
-        'codigoSolicitud',
-        'fechaSolicitud',
-        'fechaProgramada',
+        'codigo_solicitud',
         'descripcion',
-        'cantidadMaquinas',
+        'fecha_mantenimiento',
         'fotos',
-        'empresas_id',
-        'user_id',
-        'fecha_uso',
-        'hora_inicio',
-        'hora_fin',
-        'proyecto',
-        'lugar',
-        'estado'
     ];
 
     protected $casts = [
-        'fechaSolicitud' => 'date',
-        'fechaProgramada' => 'date',
-        'fecha_uso' => 'date',
+        'fecha_mantenimiento' => 'date',
         'fotos' => 'array',
     ];
 
-    // Relación con User - ESTA ESTÁ BIEN
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
-
-    // Relación con Empresa
-    public function empresa()
-    {
-        return $this->belongsTo(empresas::class, 'empresas_id');
-    }
-
-    // RELACIÓN CORREGIDA - Cambiar 'maquinarias' por 'maquinas'
+    /**
+     * Relación: una solicitud puede tener muchas máquinas (con mantenimiento y cantidad).
+     * Usa la tabla pivote solicitud_maquina.
+     */
     public function maquinas()
     {
-        return $this->belongsToMany(Maquinas::class, 'solicitud_maquina')
-                    ->withPivot('cantidad', 'created_at', 'updated_at')
+        return $this->belongsToMany(Maquinas::class, 'solicitud_maquina', 'solicitud_id', 'maquinas_id')
+                    ->withPivot('mantenimientos_id', 'cantidad')
                     ->withTimestamps();
     }
 
-    // Relación con empleados
-    public function empleados()
+    /**
+     * Relación: una solicitud puede incluir diferentes tipos de mantenimiento.
+     */
+    public function mantenimientos()
     {
-        return $this->belongsToMany(empleados::class, 'solicitud_empleado')
+        return $this->belongsToMany(Mantenimientos::class, 'solicitud_maquina', 'solicitud_id', 'mantenimientos_id')
+                    ->withPivot('maquinas_id', 'cantidad')
                     ->withTimestamps();
+    }
+
+    /**
+     * Calcula la cantidad total de máquinas involucradas en la solicitud.
+     */
+    public function getCantidadTotalMaquinasAttribute()
+    {
+        return $this->maquinas->sum(fn($maquina) => $maquina->pivot->cantidad);
+    }
+
+    /**
+     * Genera un código de solicitud único con formato SOL-YYYYMMDD-XXXXXX.
+     */
+    public static function generarCodigo()
+    {
+        do {
+            $codigo = 'SOL-' . date('Ymd') . '-' . strtoupper(Str::random(6));
+        } while (self::where('codigo_solicitud', $codigo)->exists());
+
+        return $codigo;
+    }
+
+    /**
+     * Evento boot: asigna automáticamente el código de solicitud al crear el registro.
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($solicitud) {
+            if (empty($solicitud->codigo_solicitud)) {
+                $solicitud->codigo_solicitud = self::generarCodigo();
+            }
+        });
     }
 }

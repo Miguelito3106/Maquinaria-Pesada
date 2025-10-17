@@ -1,5 +1,4 @@
 <?php
-// database/migrations/xxxx_xx_xx_xxxxxx_create_solicitud_maquina_table.php
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -7,21 +6,28 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up()
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
     {
         Schema::create('solicitud_maquina', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('solicitud_id')->constrained()->onDelete('cascade');
-            $table->foreignId('maquina_id')->constrained()->onDelete('cascade');
-            $table->integer('cantidad');
+            $table->foreignId('solicitud_id')->constrained('solicitudes')->onDelete('cascade');
+            $table->foreignId('maquinas_id')->constrained('maquinas')->onDelete('cascade');
+            $table->foreignId('mantenimientos_id')->constrained('mantenimientos')->onDelete('cascade');
+            $table->integer('cantidad')->default(1);
             $table->timestamps();
-            
-            // Para evitar duplicados
-            $table->unique(['solicitud_id', 'maquina_id']);
+
+            // Índice único para evitar duplicados
+            $table->unique(['solicitud_id', 'maquinas_id', 'mantenimientos_id'], 'solicitud_maquina_mantenimiento_unique');
         });
     }
 
-    public function down()
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
     {
         Schema::dropIfExists('solicitud_maquina');
     }

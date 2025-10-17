@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Maquina;
 use App\Models\Maquinas;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -41,8 +40,8 @@ class MaquinasController extends Controller
     public function index()
     {
         // Obtener todas las máquinas con relaciones cargadas
-        $maquinas = Maquinas::with('categoria', 'mantenimientos')->get();
-        return response()->json($maquinas);
+        $maquinarias = Maquinas::with('categoria', 'mantenimientos')->get();
+        return response()->json($maquinarias);
     }
 
     /**
@@ -79,7 +78,11 @@ class MaquinasController extends Controller
         // Validar datos de entrada
         $validator = Validator::make($request->all(), [
             'TipoMaquina' => 'required|string|max:255',
-            'categorias_maquinarias_id' => 'required|exists:categorias_maquinarias,id'
+            'categorias_maquinarias_id' => 'required|exists:categorias_maquinarias,id',
+            'nombre' => 'required|string|max:255',
+            'empresa_id' => 'nullable|exists:empresas,id',
+            'estado' => 'required|string'
+            
         ]);
 
         // Retornar errores de validación si existen
@@ -88,8 +91,8 @@ class MaquinasController extends Controller
         }
 
         // Crear nueva máquina
-        $maquina = Maquinas::create($validator->validated());
-        return response()->json($maquina, 201);
+        $maquinarias = Maquinas::create($validator->validated());
+        return response()->json($maquinarias, 201);
     }
 
     /**
@@ -123,14 +126,14 @@ class MaquinasController extends Controller
     public function show(string $id)
     {
         // Buscar máquina por ID con relaciones
-        $maquina = Maquinas::with('categoria', 'mantenimientos')->find($id);
+        $maquinarias = Maquinas::with('categoria', 'mantenimientos')->find($id);
         
         // Verificar si la máquina existe
-        if (!$maquina) {
+        if (!$maquinarias) {
             return response()->json(['message' => 'Máquina no encontrada'], 404);
         }
         
-        return response()->json($maquina);
+        return response()->json($maquinarias);
     }
 
     /**
@@ -171,15 +174,17 @@ class MaquinasController extends Controller
     public function update(Request $request, string $id)
     {
         // Buscar máquina por ID
-        $maquina = Maquinas::find($id);
-        if (!$maquina) {
+        $maquinarias = Maquinas::find($id);
+        if (!$maquinarias) {
             return response()->json(['message' => 'Máquina no encontrada'], 404);
         }
 
         // Validar datos de entrada (campos opcionales)
         $validator = Validator::make($request->all(), [
             'TipoMaquina' => 'sometimes|string|max:255',
-            'categorias_maquinarias_id' => 'sometimes|exists:categorias_maquinarias,id'
+            'categorias_maquinarias_id' => 'sometimes|exists:categorias_maquinarias,id',
+            
+            
         ]);
 
         if ($validator->fails()) {
@@ -187,8 +192,8 @@ class MaquinasController extends Controller
         }
 
         // Actualizar máquina
-        $maquina->update($validator->validated());
-        return response()->json($maquina);
+        $maquinarias->update($validator->validated());
+        return response()->json($maquinarias);
     }
 
     /**

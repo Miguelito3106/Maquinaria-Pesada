@@ -13,13 +13,10 @@ return new class extends Migration
     {
         Schema::create('solicitudes', function (Blueprint $table) {
             $table->id();
-            $table->string('codigoSolicitud')->unique();
-            $table->date('fechaSolicitud');
-            $table->date('fechaProgramada'); 
-            $table->string('descripcion');
-            $table->integer('cantidadMaquinas')->default(1); 
-            $table->json('fotos')->required ();
-            $table->foreignId('empresas_id')->constrained('empresas')->onDelete('cascade');
+            $table->string('codigo_solicitud')->unique();
+            $table->text('descripcion');
+            $table->json('fotos')->nullable();
+            $table->date('fecha_mantenimiento');
             $table->timestamps();
         });
     }

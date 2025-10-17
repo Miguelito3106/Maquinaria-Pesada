@@ -115,6 +115,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('ActualizarPagos/{id}', [PagosController::class, 'update']);
     Route::delete('EliminarPagos/{id}', [PagosController::class, 'destroy']);
 
+    // RUTAS AUXILIARES PARA SOLICITUDES
+    Route::get('MaquinasDisponibles', [SolicitudesController::class, 'maquinasDisponibles']);
+    Route::get('MantenimientosDisponibles', [SolicitudesController::class, 'mantenimientosDisponibles']);
+
     // CONSULTAS EXTRAS
     Route::get('EmpleadosOrdenados', [EmpleadosController::class, 'listarEmpleadosOrdenados']);
     Route::get('MaquinasPesadasCostosas', [MaquinasController::class, 'maquinasPesadasCostosas']);

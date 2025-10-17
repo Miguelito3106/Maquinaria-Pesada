@@ -100,7 +100,6 @@ class MantenimientosController extends Controller
             'manualProcedimiento' => 'nullable|string',
             'fechaEntrega' => 'required|date|after_or_equal:today',
             'maquinas_id' => 'required|exists:maquinas,id',
-            'solicitud_id' => 'required|exists:solicitudes,id'
         ], [
             'codigo.required' => 'El código es obligatorio',
             'codigo.unique' => 'El código ya existe',
@@ -114,9 +113,6 @@ class MantenimientosController extends Controller
             'fechaEntrega.required' => 'La fecha de entrega es obligatoria',
             'fechaEntrega.after_or_equal' => 'La fecha de entrega no puede ser anterior a hoy',
             'maquinas_id.required' => 'La máquina es obligatoria',
-            'maquinas_id.exists' => 'La máquina seleccionada no existe',
-            'solicitud_id.required' => 'La solicitud es obligatoria',
-            'solicitud_id.exists' => 'La solicitud seleccionada no existe'
         ]);
 
         if ($validator->fails()) {

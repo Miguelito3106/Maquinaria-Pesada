@@ -1,200 +1,211 @@
 <?php
-// app/Http/Controllers/SolicitudController.php
 
 namespace App\Http\Controllers;
 
 use App\Models\Solicitudes;
 use App\Models\Maquinas;
-use App\Models\empleados;
+use App\Models\Mantenimientos;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class SolicitudesController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Mostrar todas las solicitudes.
      */
     public function index()
     {
-        $solicitudes = Solicitudes::with(['user', 'maquinas'])->get();
-        return response()->json($solicitudes);
+        try {
+            $solicitudes = Solicitudes::with(['maquina', 'mantenimiento', 'empleados'])->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $solicitudes,
+                'count' => $solicitudes->count()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener solicitudes',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        $maquinas = Maquinas::where('estado', 'disponible')->get();
-        return response()->json($maquinas);
-    }
-
-    /**
-     * Store a newly created resource in storage.
+     * Crear una nueva solicitud.
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'fecha_uso' => 'required|date',
-            'hora_inicio' => 'required',
-            'hora_fin' => 'required',
-            'proyecto' => 'required|string|max:255',
-            'lugar' => 'required|string|max:255',
-            'maquinas' => 'required|array',
-            'maquinas.*' => 'exists:maquinas,id',
-            'cantidades' => 'required|array',
-            'cantidades.*' => 'integer|min:1'
-        ]);
+        try {
+            $validated = $request->validate([
+                'maquina_id' => 'required|exists:maquinas,id',
+                'mantenimiento_id' => 'nullable|exists:mantenimientos,id',
+                'cantidad' => 'required|integer|min:1',
+                'fecha_deseada' => 'required|date|after_or_equal:today',
+                'descripcion' => 'required|string|max:1000',
+                'foto' => 'nullable|image|max:2048'
+            ]);
 
-        $solicitud = Solicitudes::create([
-            'user_id' => Auth::id(),
-            'fechaSolicitud' => now(),
-            'fecha_uso' => $request->fecha_uso,
-            'hora_inicio' => $request->hora_inicio,
-            'hora_fin' => $request->hora_fin,
-            'proyecto' => $request->proyecto,
-            'lugar' => $request->lugar,
-            'estado' => 'pendiente'
-        ]);
+            DB::beginTransaction();
 
-        // Sincronizar máquinas con cantidades
-        $maquinasData = [];
-        foreach ($request->maquinas as $index => $maquinaId) {
-            $maquinasData[$maquinaId] = ['cantidad' => $request->cantidades[$index]];
+            // Subir la foto si existe
+            $rutaFoto = null;
+            if ($request->hasFile('foto')) {
+                $rutaFoto = $request->file('foto')->store('fotos_mantenimientos', 'public');
+            }
+
+            // Crear la solicitud
+            $solicitud = Solicitudes::create([
+                'codigo' => 'SOL-' . strtoupper(Str::random(6)),
+                'maquina_id' => $validated['maquina_id'],
+                'mantenimiento_id' => $validated['mantenimiento_id'] ?? null,
+                'cantidad' => $validated['cantidad'],
+                'fecha_deseada' => $validated['fecha_deseada'],
+                'descripcion' => $validated['descripcion'] ?? null,
+                'foto' => $rutaFoto,
+                'estado' => 'pendiente'
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Solicitud creada correctamente.',
+                'data' => $solicitud
+            ], 201);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error de validación',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al crear la solicitud',
+                'error' => $e->getMessage()
+            ], 500);
         }
-        
-        $solicitud->maquinas()->sync($maquinasData);
-
-        return response()->json(['message' => 'Solicitud creada correctamente.', 'solicitud' => $solicitud->load('maquinas')], 201);
     }
 
     /**
-     * Display the specified resource.
+     * Mostrar una solicitud específica.
      */
-    public function show(Solicitudes $solicitud)
+    public function show($id)
     {
-        $solicitud->load(['user', 'maquinas']);
-        return response()->json($solicitud);
-    }
+        try {
+            $solicitud = Solicitudes::with(['maquina', 'mantenimiento', 'empleados'])->find($id);
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Solicitudes $solicitud)
-    {
-        $maquinas = Maquinas::where('estado', 'disponible')->get();
-        $solicitud->load('maquinas');
-        return response()->json(['solicitud' => $solicitud, 'maquinas' => $maquinas]);
-    }
+            if (!$solicitud) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Solicitud no encontrada'
+                ], 404);
+            }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Solicitudes $solicitud)
-    {
-        $request->validate([
-            'fecha_uso' => 'required|date',
-            'hora_inicio' => 'required',
-            'hora_fin' => 'required',
-            'proyecto' => 'required|string|max:255',
-            'lugar' => 'required|string|max:255',
-            'maquinas' => 'required|array',
-            'maquinas.*' => 'exists:maquinas,id',
-            'cantidades' => 'required|array',
-            'cantidades.*' => 'integer|min:1',
-            'estado' => 'required|in:pendiente,aprobada,rechazada,completada'
-        ]);
-
-        $solicitud->update([
-            'fecha_uso' => $request->fecha_uso,
-            'hora_inicio' => $request->hora_inicio,
-            'hora_fin' => $request->hora_fin,
-            'proyecto' => $request->proyecto,
-            'lugar' => $request->lugar,
-            'estado' => $request->estado
-        ]);
-
-        // Sincronizar máquinas con cantidades
-        $maquinasData = [];
-        foreach ($request->maquinas as $index => $maquinaId) {
-            $maquinasData[$maquinaId] = ['cantidad' => $request->cantidades[$index]];
+            return response()->json([
+                'success' => true,
+                'data' => $solicitud
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener la solicitud',
+                'error' => $e->getMessage()
+            ], 500);
         }
-        
-        $solicitud->maquinas()->sync($maquinasData);
-
-        return response()->json(['message' => 'Solicitud actualizada correctamente.', 'solicitud' => $solicitud->load('maquinas')]);
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Actualizar una solicitud.
      */
-    public function destroy(Solicitudes $solicitud)
+    public function update(Request $request, $id)
     {
-        $solicitud->maquinas()->detach();
-        $solicitud->delete();
+        try {
+            $solicitud = Solicitudes::find($id);
 
-        return response()->json(['message' => 'Solicitud eliminada correctamente.']);
-    }
+            if (!$solicitud) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Solicitud no encontrada'
+                ], 404);
+            }
 
-    /**
-     * Cambiar estado de la solicitud
-     */
-    public function cambiarEstado(Request $request, Solicitudes $solicitud)
-    {
-        $request->validate([
-            'estado' => 'required|in:pendiente,aprobada,rechazada,completada'
-        ]);
+            $validated = $request->validate([
+                'maquina_id' => 'required|exists:maquinas,id',
+                'mantenimiento_id' => 'nullable|exists:mantenimientos,id',
+                'cantidad' => 'required|integer|min:1',
+                'fecha_deseada' => 'required|date',
+                'descripcion' => 'nullable|string|max:1000',
+                'foto' => 'nullable|image|max:2048',
+                'estado' => 'nullable|string|in:pendiente,en proceso,finalizada'
+            ]);
 
-        $solicitud->update(['estado' => $request->estado]);
+            DB::beginTransaction();
 
-        return response()->json(['message' => 'Estado de la solicitud actualizado correctamente.', 'solicitud' => $solicitud]);
-    }
+            if ($request->hasFile('foto')) {
+                $rutaFoto = $request->file('foto')->store('fotos_mantenimientos', 'public');
+                $solicitud->foto = $rutaFoto;
+            }
 
-    // Total de máquinas solicitadas por empresa
-    public function totalMaquinasEmpresa($nombre)
-    {
-        $total = DB::table('solicitudes')
-            ->join('empresas', 'solicitudes.empresas_id', '=', 'empresas.id')
-            ->join('solicitud_maquina', 'solicitudes.id', '=', 'solicitud_maquina.solicitud_id')
-            ->where('empresas.nombreEmpresa', $nombre)
-            ->sum('solicitud_maquina.cantidad');
+            $solicitud->update([
+                'maquina_id' => $validated['maquina_id'],
+                'mantenimiento_id' => $validated['mantenimiento_id'] ?? null,
+                'cantidad' => $validated['cantidad'],
+                'fecha_deseada' => $validated['fecha_deseada'],
+                'descripcion' => $validated['descripcion'] ?? null,
+                'estado' => $validated['estado'] ?? $solicitud->estado
+            ]);
 
-        return response()->json(['empresa' => $nombre, 'total_maquinas' => $total]);
-    }
+            DB::commit();
 
-    // Solicitudes por documento de empleado
-    public function solicitudesPorDocumentoEmpleado($documento)
-    {
-        $empleado = empleados::where('Documento', $documento)->first();
-        if (!$empleado) {
-            return response()->json(['message' => 'Empleado no encontrado'], 404);
+            return response()->json([
+                'success' => true,
+                'message' => 'Solicitud actualizada correctamente.',
+                'data' => $solicitud
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar solicitud',
+                'error' => $e->getMessage()
+            ], 500);
         }
-        $solicitudes = $empleado->solicitudes()->with('maquinas')->get();
-        return response()->json($solicitudes);
     }
 
-    // Reporte detallado de solicitudes
-    public function reporteSolicitudesDetallado()
+    /**
+     * Eliminar una solicitud.
+     */
+    public function destroy($id)
     {
-        $solicitudes = Solicitudes::with(['user', 'maquinas', 'empleados'])->get();
-        return response()->json($solicitudes);
-    }
+        try {
+            $solicitud = Solicitudes::find($id);
 
-    // Buscar solicitud con empleados
-    public function buscarSolicitudConEmpleados($codigo)
-    {
-        $solicitud = Solicitudes::where('id', $codigo)->with(['user', 'maquinas', 'empleados'])->first();
-        return response()->json($solicitud);
-    }
+            if (!$solicitud) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Solicitud no encontrada'
+                ], 404);
+            }
 
-    // Reporte de octubre 2023
-    public function reporteOctubre2023()
-    {
-        $solicitudes = Solicitudes::whereYear('fechaSolicitud', 2023)
-            ->whereMonth('fechaSolicitud', 10)
-            ->with(['user', 'maquinas', 'empresa'])
-            ->get();
-        return response()->json($solicitudes);
+            $solicitud->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Solicitud eliminada correctamente.'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al eliminar solicitud',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }
